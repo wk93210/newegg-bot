@@ -10,12 +10,12 @@ async function check_cart (page) {
 	try {
 		//await page.waitForSelector('span.amount')
 		var element = await page.$('span.amount')
-		await report("Card in stock, attempting to purchase")
 		var text = await page.evaluate(element => element.textContent, element);
 		if (parseInt(text.split('$')[1]) > config.price_limit) {
 			await report("Price exceeds limit but bot is currently not working correctly with this functionality")
 			return false
 		}
+		await report("Card in stock, attempting to purchase")
 		return true
 	} catch (err) {
 		await report("Card not in stock")
