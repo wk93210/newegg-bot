@@ -15,6 +15,6 @@ Once that is finished, create a copy of config_template.json and name it config.
 
 After installation and configuration, the bot can then be run by using `node neweggbot.js`.
 
-At the moment, in the event that a card comes in stock, but goes out of stock before the bot has been able to complete the purchase, it will likely break, and you will need to restart it.  In general, there are very likely to be issues that break the bot and require you to restart it.
+At the moment, in the event that a card comes in stock, but goes out of stock before the bot has been able to complete the purchase, it will likely break, and you will need to restart it.  In general, there are very likely to be occasional issues that break the bot and require you to restart it.
 
 
