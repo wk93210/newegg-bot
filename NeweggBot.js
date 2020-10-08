@@ -102,12 +102,19 @@ async function run () {
 	await page.waitForNavigation({
 		waitUntil: 'networkidle2',
 	});
-	
+		
 	try {
-	await page.goto("javascript:Biz.Shopping.CheckAddress.UseOrginalAddress('Shipping')" , {timeout: 500})
+		await page.goto("javascript:Biz.Shopping.CheckAddress.UseOrginalAddress('Shipping')" , {timeout: 500})
 	} catch (err) {
 	}
 	
+	
+	try {
+		await page.goto("javascript:Biz.GlobalShopping.CheckOut.continueToBilling()" , {timeout: 500})
+	} catch (err) {
+	}
+	
+					
 	await page.waitForSelector('#cvv2Code')
 	await page.type('#cvv2Code', config.cv2)
 	await page.click('#term')
