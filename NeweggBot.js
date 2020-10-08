@@ -113,11 +113,6 @@ async function run () {
 	} catch (err) {
 	}
 	
-	try {
-		await page.goto("javascript:Biz.GlobalShopping.CheckOut.continueToReview(1)" , {timeout: 250})
-	} catch (err) {
-	}
-	
 	while (true) {
 		try {
 			await page.waitForSelector('#cvv2Code' , {timeout: 500})
@@ -131,6 +126,11 @@ async function run () {
 			break
 		} catch (err) {
 		}
+	}
+	
+	try {
+		await page.goto("javascript:Biz.GlobalShopping.CheckOut.continueToReview(1)" , {timeout: 250})
+	} catch (err) {
 	}
 		
 	await page.click('#term')
