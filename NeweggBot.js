@@ -6,13 +6,20 @@ async function report (log) {
 	console.log(currentTime.toString().split('G')[0] + ': ' + log)
 }
 async function check_cart (page) {
-	await page.waitForTimeout(500)
 	try {
-		//await page.waitForSelector('span.amount')
+		await page.waitForSelector('span.amount' , { timeout: 1000 })
 		var element = await page.$('span.amount')
 		var text = await page.evaluate(element => element.textContent, element);
 		if (parseInt(text.split('$')[1]) > config.price_limit) {
-			await report("Price exceeds limit but bot is currently not working correctly with this functionality")
+			await report("Price exceeds limit, removing from cart")
+			var button = await page.$$('button.btn.btn-mini');
+			while (true) {
+				try {
+					await button[1].click()
+				} catch (err) {
+					break
+				}
+			}
 			return false
 		}
 		await report("Card in stock, attempting to purchase")
