@@ -39,6 +39,7 @@ async function run () {
 		});
 
 	} catch (err) {
+		report("Manual authorization code required by Newegg.  This should only happen once.")
 		while (page.url().includes('signin'))
 		{
 			await page.waitForTimeout(500)
