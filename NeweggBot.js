@@ -113,12 +113,19 @@ async function run () {
 	} catch (err) {
 	}
 	
-	try {
-		await page.waitForSelector('#cvv2Code' , {timeout: 500})
-		await page.type('#cvv2Code', config.cv2)
-	} catch (err) {
-		await page.waitForSelector('#creditCardCVV2' , {timeout: 500})
-		await page.type('#creditCardCVV2', config.cv2)
+	while (true) {
+		try {
+			await page.waitForSelector('#cvv2Code' , {timeout: 500})
+			await page.type('#cvv2Code', config.cv2)
+			break
+		} catch (err) {
+		}
+		try {
+			await page.waitForSelector('#creditCardCVV2' , {timeout: 500})
+			await page.type('#creditCardCVV2', config.cv2)
+			break
+		} catch (err) {
+		}
 	}
 		
 	await page.click('#term')
