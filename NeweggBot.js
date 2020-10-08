@@ -108,15 +108,19 @@ async function run () {
 	} catch (err) {
 	}
 	
-	
 	try {
 		await page.goto("javascript:Biz.GlobalShopping.CheckOut.continueToBilling()" , {timeout: 500})
 	} catch (err) {
 	}
 	
-					
-	await page.waitForSelector('#cvv2Code')
-	await page.type('#cvv2Code', config.cv2)
+	try {
+		await page.waitForSelector('#cvv2Code' , {timeout: 500})
+		await page.type('#cvv2Code', config.cv2)
+	} catch (err) {
+		await page.waitForSelector('#creditCardCVV2' , {timeout: 500})
+		await page.type('#creditCardCVV2', config.cv2)
+	}
+		
 	await page.click('#term')
 	if (config.auto_submit == 'true') {
 		await page.click('#SubmitOrder')
