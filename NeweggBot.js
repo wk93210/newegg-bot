@@ -47,13 +47,24 @@ async function run () {
 			await report("Card not in stock")
 			await page.waitForTimeout(config.refresh_time * 1000)
 		} else if (page.url().includes("ShoppingItem")) {
+			await report("Card in stock, attempting to purchase")
+			await page.goto('https://secure.newegg.com/Shopping/ShoppingCart.aspx', { waitUntil: 'networkidle2' })
+			await page.waitForSelector('span.amount')
+			const element = await page.$('span.amount')
+			const text = await page.evaluate(element => element.textContent, element);
+			if (parseInt(text.split('$')[1]) > config.price_limit) {
+				await report("Price exceeds limit")
+				try {
+					await page.goto("javascript:attachDelegateEvent((function(){Biz.GlobalShopping.ShoppingCart.shoppingCartOperation('14-126-352.1.0.0','REMOVECHKITEMS','');}))", {timeout: 500})
+				} catch (err) {
+				}
+				continue
+			}
 			break
 		} else if (page.url().includes("areyouahuman")) {
 			await page.waitForTimeout(1000)
 		}
 	}
-	await report("Card in stock, attempting to purchase")
-	await page.goto('https://secure.newegg.com/Shopping/ShoppingCart.aspx', { waitUntil: 'networkidle2' })
 	
 	try {
 		await page.goto('javascript:attachDelegateEvent((function(){Biz.GlobalShopping.ShoppingCart.checkOut(\'True\')}))', {timeout: 500})
