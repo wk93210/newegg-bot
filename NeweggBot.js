@@ -6,6 +6,7 @@ async function report (log) {
 	console.log(currentTime.toString().split('G')[0] + ': ' + log)
 }
 async function check_cart (page) {
+	await page.waitForTimeout(250)
 	try {
 		await page.waitForSelector('span.amount' , { timeout: 1000 })
 		var element = await page.$('span.amount')
@@ -97,6 +98,10 @@ async function run () {
 		await page.goto('javascript:attachDelegateEvent((function(){Biz.GlobalShopping.ShoppingCart.checkOut(\'True\')}))', {timeout: 500})
 	} catch (err) {
 	}
+	
+	await page.waitForNavigation({
+		waitUntil: 'networkidle2',
+	});
 	
 	try {
 	await page.goto("javascript:Biz.Shopping.CheckAddress.UseOrginalAddress('Shipping')" , {timeout: 500})
