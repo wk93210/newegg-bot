@@ -98,6 +98,11 @@ async function run () {
 	} catch (err) {
 	}
 	
+	try {
+	await page.goto("javascript:Biz.Shopping.CheckAddress.UseOrginalAddress('Shipping')" , {timeout: 500})
+	} catch (err) {
+	}
+	
 	await page.waitForSelector('#cvv2Code')
 	await page.type('#cvv2Code', config.cv2)
 	await page.click('#term')
@@ -107,5 +112,6 @@ async function run () {
 	await report("Completed purchase")
     	//await browser.close()
 }
+
 
 run()
