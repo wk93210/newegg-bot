@@ -55,8 +55,8 @@ async function run () {
     	await page.type('#labeled-input-signEmail', config.email)
 	await page.waitForTimeout(500)
 	await page.click('button.btn.btn-orange')
-	await page.waitForTimeout(500)
 	try {
+		await page.waitForSelector('#labeled-input-password' , {timeout: 2000})
 		await page.type('#labeled-input-password', config.password)
 		await page.waitForTimeout(500)
 		await page.click('button.btn.btn-orange')
@@ -95,7 +95,7 @@ async function run () {
 		}
 	}
 	try {
-		await page.goto('javascript:attachDelegateEvent((function(){Biz.GlobalShopping.ShoppingCart.checkOut(\'True\')}))', {timeout: 500})
+		await page.goto('javascript:attachDelegateEvent((function(){Biz.GlobalShopping.ShoppingCart.checkOut(\'True\')}))', {timeout: 250})
 	} catch (err) {
 	}
 	
@@ -104,12 +104,17 @@ async function run () {
 	});
 		
 	try {
-		await page.goto("javascript:Biz.Shopping.CheckAddress.UseOrginalAddress('Shipping')" , {timeout: 500})
+		await page.goto("javascript:Biz.Shopping.CheckAddress.UseOrginalAddress('Shipping')" , {timeout: 250})
 	} catch (err) {
 	}
 	
 	try {
-		await page.goto("javascript:Biz.GlobalShopping.CheckOut.continueToBilling()" , {timeout: 500})
+		await page.goto("javascript:Biz.GlobalShopping.CheckOut.continueToBilling()" , {timeout: 250})
+	} catch (err) {
+	}
+	
+	try {
+		await page.goto("javascript:Biz.GlobalShopping.CheckOut.continueToReview(1)" , {timeout: 250})
 	} catch (err) {
 	}
 	
