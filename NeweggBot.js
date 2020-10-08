@@ -95,22 +95,22 @@ async function run () {
 		}
 	}
 	try {
-		await page.goto('javascript:attachDelegateEvent((function(){Biz.GlobalShopping.ShoppingCart.checkOut(\'True\')}))', {timeout: 250})
+		await page.goto('javascript:attachDelegateEvent((function(){Biz.GlobalShopping.ShoppingCart.checkOut(\'True\')}))', {timeout: 500})
 	} catch (err) {
 	}
 	
-	await page.waitForNavigation({
-		waitUntil: 'networkidle2',
-	});
-		
-	try {
-		await page.goto("javascript:Biz.Shopping.CheckAddress.UseOrginalAddress('Shipping')" , {timeout: 250})
-	} catch (err) {
+	while (page.url().includes("CheckAddress")){	
+		try {
+			await page.goto("javascript:Biz.Shopping.CheckAddress.UseOrginalAddress('Shipping')" , {timeout: 500})
+		} catch (err) {
+		}
 	}
 	
-	try {
-		await page.goto("javascript:Biz.GlobalShopping.CheckOut.continueToBilling()" , {timeout: 250})
-	} catch (err) {
+	while (page.url().includes("CheckoutStep1")){
+		try {
+			await page.goto("javascript:Biz.GlobalShopping.CheckOut.continueToBilling()" , {timeout: 500})
+		} catch (err) {
+		}
 	}
 	
 	while (true) {
@@ -128,12 +128,19 @@ async function run () {
 		}
 	}
 	
+	while (page.url().includes("CheckoutByNeweggPay")){
+		try {
+			await page.goto("javascript:Biz.GlobalShopping.CheckOut.continueToReview(1)" , {timeout: 500})
+		} catch (err) {
+		}
+	}
+	
 	try {
-		await page.goto("javascript:Biz.GlobalShopping.CheckOut.continueToReview(1)" , {timeout: 250})
+		await page.waitForSelector('#term' , {timeout: 5000})	
+		await page.click('#term')
 	} catch (err) {
 	}
-		
-	await page.click('#term')
+
 	if (config.auto_submit == 'true') {
 		await page.click('#SubmitOrder')
 	}
