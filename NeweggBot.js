@@ -8,15 +8,15 @@ async function report (log) {
 
 async function run () {
 	await report("Started")
-    const browser = await puppeteer.launch({
-        headless: false,
-        defaultViewport: { width: 1366, height: 768 }
-    })
+	const browser = await puppeteer.launch({
+        	headless: false,
+        	defaultViewport: { width: 1366, height: 768 }
+    	})
 	
-    const page = await browser.newPage()
+    	const page = await browser.newPage()
 	
 	await page.goto('http://newegg.com', { waitUntil: 'networkidle2' })
-    while (true) {
+    	while (true) {
 		await page.goto('https://secure.newegg.com/NewMyAccount/AccountLogin.aspx?nextpage=https%3a%2f%2fwww.newegg.com%2f', { waitUntil: 'load' })
 		if (page.url().includes('signin')) {
 			break;
@@ -26,7 +26,7 @@ async function run () {
 	}
 	
 	await page.waitForSelector('#labeled-input-signEmail')
-    await page.type('#labeled-input-signEmail', config.email)
+    	await page.type('#labeled-input-signEmail', config.email)
 	await page.waitForTimeout(500)
 	await page.click('button.btn.btn-orange')
 	await page.waitForSelector('#labeled-input-password')
@@ -67,7 +67,7 @@ async function run () {
 		await page.click('#SubmitOrder')
 	}
 	await report("Completed purchase")
-    //await browser.close()
+    	//await browser.close()
 }
 
 run()
