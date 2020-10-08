@@ -29,13 +29,21 @@ async function run () {
     	await page.type('#labeled-input-signEmail', config.email)
 	await page.waitForTimeout(500)
 	await page.click('button.btn.btn-orange')
-	await page.waitForSelector('#labeled-input-password')
-	await page.type('#labeled-input-password', config.password)
 	await page.waitForTimeout(500)
-	await page.click('button.btn.btn-orange')
-	await page.waitForNavigation({
-		waitUntil: 'networkidle2',
-	});
+	try {
+		await page.type('#labeled-input-password', config.password)
+		await page.waitForTimeout(500)
+		await page.click('button.btn.btn-orange')
+		await page.waitForNavigation({
+			waitUntil: 'networkidle2',
+		});
+
+	} catch (err) {
+		while (page.url().includes('signin'))
+		{
+			await page.waitForTimeout(500)
+		}
+	}
 
 	await report("Logged in")
 	await report("Checking for card")
