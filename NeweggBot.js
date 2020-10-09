@@ -43,12 +43,6 @@ async function run () {
     const page = await browser.newPage()
 	
     while (true) {
-		//await page.goto('http://newegg.com', { waitUntil: 'load' })
-		//await page.waitForSelector('a.nav-complex-inner')
-		//await page.click('a.nav-complex-inner')
-		//await page.waitForNavigation({
-			//waitUntil: 'load',
-		//});
 		await page.goto('https://secure.newegg.com/NewMyAccount/AccountLogin.aspx?nextpage=https%3a%2f%2fwww.newegg.com%2f' , {waitUntil: 'load' })
 		if (page.url().includes('signin')) {
 			await page.waitForSelector('button.btn.btn-orange')
