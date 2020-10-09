@@ -101,7 +101,7 @@ async function run () {
 				break
 			}
 		} else if (page.url().includes("areyouahuman")) {
-			await page.waitForTimeout(500)
+			await page.waitForTimeout(1000)
 		}
 	}
 	try {
