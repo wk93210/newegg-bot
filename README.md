@@ -4,7 +4,7 @@ Autonomously buy GPUs from Newegg as soon as they become available
 This bot is very much still in the early stages, and more than a little rough around the edges.  Expect the occasional hiccups if you decide to use it.
 
 You will require [Node.js 14](https://nodejs.org/en/) to run this.
-After installing via git or by downloading the code and extracting it, navigate to the folder where the files are located via powershell(or equivalent console) and run `npm install puppeteer`.
+After installing via git or by downloading the code and extracting it, navigate to the folder where the files are located via powershell(or equivalent console) and run `npm install puppeteer -PUPPETEER_PRODUCT=firefox`.
 
 Once that is finished, create a copy of config_template.json and name it config.json.  Inside you will find the very basic customization options.  
 - 'cv2' refers to the three digit code on the back of your credit card.  
