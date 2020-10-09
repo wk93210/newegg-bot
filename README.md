@@ -18,7 +18,7 @@ Once that is finished, create a copy of config_template.json and name it config.
 ## Usage
 After installation and configuration, the bot can then be run by using `node neweggbot.js`. 
 
-It is important if you've never used your Newegg account before that you setup your account with a valid address and payment information, and then run through the checkout process manually making any changes to shipping and payment as Newegg requests.  You don't need to complete that purchase, just correct things so that when you click 'Secure Checkout' from the cart, it brings you to 'Review', not 'Shipping' or 'Payment'.
+It is important if you've never used your Newegg account before that you setup your account with a valid address and payment information, and then run through the checkout process manually making any changes to shipping and payment as Newegg requests.  You don't need to complete that purchase, just correct things so that when you click `Secure Checkout` from the cart, it brings you to `Review`, not `Shipping` or `Payment`.
 
 At the moment, in the event that a card comes in stock, but goes out of stock before the bot has been able to complete the purchase, it will likely break, and you will need to restart it.  In general, there are very likely to be occasional issues that break the bot and require you to restart it.
 
