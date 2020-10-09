@@ -1,5 +1,5 @@
 const puppeteer = require('puppeteer')
-const config = require('./config.json'); 
+const config = require('./config.json')
 
 async function report (log) {
 	currentTime = new Date();
@@ -23,7 +23,7 @@ async function check_cart (page) {
 			}
 			return false
 		}
-		await report("Card in stock, attempting to purchase")
+		await report("Card added to cart, attempting to purchase")
 		return true
 	} catch (err) {
 		await report("Card not in stock")
@@ -37,38 +37,49 @@ async function run () {
 	await report("Started")
 	const browser = await puppeteer.launch({
         	headless: false,
+			product: 'firefox',
         	defaultViewport: { width: 1366, height: 768 }
     	})
-    	const page = await browser.newPage()
+    const page = await browser.newPage()
 	
-	await page.goto('http://newegg.com', { waitUntil: 'networkidle2' })
-    	while (true) {
-		await page.goto('https://secure.newegg.com/NewMyAccount/AccountLogin.aspx?nextpage=https%3a%2f%2fwww.newegg.com%2f', { waitUntil: 'load' })
+    while (true) {
+		//await page.goto('http://newegg.com', { waitUntil: 'load' })
+		//await page.waitForSelector('a.nav-complex-inner')
+		//await page.click('a.nav-complex-inner')
+		//await page.waitForNavigation({
+			//waitUntil: 'load',
+		//});
+		await page.goto('https://secure.newegg.com/NewMyAccount/AccountLogin.aspx?nextpage=https%3a%2f%2fwww.newegg.com%2f' , {waitUntil: 'load' })
 		if (page.url().includes('signin')) {
-			break;
+			await page.waitForSelector('button.btn.btn-orange')
+			await page.type('#labeled-input-signEmail', config.email)
+			await page.click('button.btn.btn-orange')
+			await page.waitForTimeout(1500)
+			try {
+				await page.waitForSelector('#labeled-input-signEmail', {timeout: 500})
+			} catch (err) {
+				try {
+					await page.waitForSelector('#labeled-input-password' , {timeout: 2500})
+					await page.waitForSelector('button.btn.btn-orange')
+					await page.type('#labeled-input-password', config.password)
+					await page.click('button.btn.btn-orange')
+					await page.waitForTimeout(1500)
+					try {
+						await page.waitForSelector('#labeled-input-password', {timeout: 500})
+					} catch (err) {
+						break
+					}
+				} catch (err) {
+					report("Manual authorization code required by Newegg.  This should only happen once.")
+					while (page.url().includes('signin'))
+					{
+						await page.waitForTimeout(500)
+					}
+					break
+				}
+			}
 		} else if (page.url().includes("areyouahuman")) {
 			await page.waitForTimeout(1000)
-		}
-	}
-	
-	await page.waitForSelector('#labeled-input-signEmail')
-    	await page.type('#labeled-input-signEmail', config.email)
-	await page.waitForTimeout(500)
-	await page.click('button.btn.btn-orange')
-	try {
-		await page.waitForSelector('#labeled-input-password' , {timeout: 2000})
-		await page.type('#labeled-input-password', config.password)
-		await page.waitForTimeout(500)
-		await page.click('button.btn.btn-orange')
-		await page.waitForNavigation({
-			waitUntil: 'networkidle2',
-		});
-
-	} catch (err) {
-		report("Manual authorization code required by Newegg.  This should only happen once.")
-		while (page.url().includes('signin'))
-		{
-			await page.waitForTimeout(500)
 		}
 	}
 
@@ -84,14 +95,13 @@ async function run () {
 				break
 			}
 		} else if (page.url().includes("ShoppingItem")) {
-			await page.goto('https://secure.newegg.com/Shopping/ShoppingCart.aspx', { waitUntil: 'networkidle2' })
-			await page.waitForTimeout(500)
+			await page.goto('https://secure.newegg.com/Shopping/ShoppingCart.aspx', { waitUntil: 'load' })
 			var check = await check_cart(page)
 			if (check){
 				break
 			}
 		} else if (page.url().includes("areyouahuman")) {
-			await page.waitForTimeout(1000)
+			await page.waitForTimeout(500)
 		}
 	}
 	try {
