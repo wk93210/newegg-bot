@@ -107,20 +107,6 @@ async function run () {
 	} catch (err) {
 	}
 	
-	while (page.url().includes("CheckAddress")){	
-		try {
-			await page.goto("javascript:Biz.Shopping.CheckAddress.UseOrginalAddress('Shipping')" , {timeout: 500})
-		} catch (err) {
-		}
-	}
-	
-	while (page.url().includes("CheckoutStep1")){
-		try {
-			await page.goto("javascript:Biz.GlobalShopping.CheckOut.continueToBilling()" , {timeout: 500})
-		} catch (err) {
-		}
-	}
-	
 	while (true) {
 		try {
 			await page.waitForSelector('#cvv2Code' , {timeout: 500})
@@ -135,14 +121,7 @@ async function run () {
 		} catch (err) {
 		}
 	}
-	
-	while (page.url().includes("CheckoutByNeweggPay")){
-		try {
-			await page.goto("javascript:Biz.GlobalShopping.CheckOut.continueToReview(1)" , {timeout: 500})
-		} catch (err) {
-		}
-	}
-	
+
 	try {
 		await page.waitForSelector('#term' , {timeout: 5000})	
 		await page.click('#term')
