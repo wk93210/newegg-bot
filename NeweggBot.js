@@ -82,20 +82,24 @@ async function run () {
 
 	while (true)
 	{
-		await page.goto('https://secure.newegg.com/Shopping/AddtoCart.aspx?Submit=ADD&ItemList=' + config.item_number, { waitUntil: 'load' })
-		if (page.url().includes("ShoppingCart")) {
-			var check = await check_cart(page)
-			if (check) {
-				break
+		try {
+			await page.goto('https://secure.newegg.com/Shopping/AddtoCart.aspx?Submit=ADD&ItemList=' + config.item_number, { waitUntil: 'load' })
+			if (page.url().includes("ShoppingCart")) {
+				var check = await check_cart(page)
+				if (check) {
+					break
+				}
+			} else if (page.url().includes("ShoppingItem")) {
+				await page.goto('https://secure.newegg.com/Shopping/ShoppingCart.aspx', { waitUntil: 'load' })
+				var check = await check_cart(page)
+				if (check){
+					break
+				}
+			} else if (page.url().includes("areyouahuman")) {
+				await page.waitForTimeout(1000)
 			}
-		} else if (page.url().includes("ShoppingItem")) {
-			await page.goto('https://secure.newegg.com/Shopping/ShoppingCart.aspx', { waitUntil: 'load' })
-			var check = await check_cart(page)
-			if (check){
-				break
-			}
-		} else if (page.url().includes("areyouahuman")) {
-			await page.waitForTimeout(1000)
+		} catch (err) {
+			continue
 		}
 	}
 	try {
