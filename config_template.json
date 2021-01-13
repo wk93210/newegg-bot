@@ -2,8 +2,12 @@
 	"email":"email@email.com",
 	"password":"supercoolpassword",
 	"cv2":"123",
-	"refresh_time":"5",
-	"item_number":"N82E16814137595,N82E16814126455",
-	"auto_submit":"true",
-	"price_limit":"800"
+	"wishlist":"00000000",
+	"auto_submit":true,
+	"price_limit":"2000",
+	"over_price_limit_behavior": "stop",
+	"refresh_time": 10,
+	"randomized_wait_ceiling": 10,
+	"site_domain": "com",
+	"browser_executable_path": "C:/Progra~2/Google/Chrome/Application/chrome.exe"
 }
