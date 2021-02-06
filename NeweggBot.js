@@ -1,6 +1,17 @@
 const puppeteer = require('puppeteer')
+const readline = require("readline")
 const config = require('./config.json')
 const log4js = require("log4js")
+
+log4js.configure({
+	appenders: {
+		out: { type: 'stdout' },
+		app: { type: 'file', filename: 'application.log' }
+	},
+	categories: {
+		default: { appenders: [ 'out', 'app' ], level: 'trace' }
+	}
+})
 
 const logger = log4js.getLogger("Newegg Shopping Bot")
 logger.level = "trace"
@@ -9,38 +20,77 @@ logger.level = "trace"
  * Sign into wegg
  * @param {*} page The page containing the element
  */
-async function signin(page) {
-	if (page.url().includes('signin')) {
+async function signin(page, rl) {
+	//look for email field and input email
+	try {
+		await page.waitForSelector('#labeled-input-signEmail', { timeout: 2500 })
 		await page.waitForSelector('button.btn.btn-orange')
 		await page.type('#labeled-input-signEmail', config.email)
 		await page.click('button.btn.btn-orange')
+	} catch (signEmailInputErr) {
+		logger.error("No email selector found")
+	}
+	
+	await page.waitForTimeout(1500)
+	
+	//look for password field and input password
+	try {
+		await page.waitForSelector('#labeled-input-password', { timeout: 2500 })
+		await page.waitForSelector('button.btn.btn-orange')
+		await page.type('#labeled-input-password', config.password)
+		await page.click('button.btn.btn-orange')
+		
 		await page.waitForTimeout(1500)
+		
 		try {
-			await page.waitForSelector('#labeled-input-signEmail', { timeout: 500 })
-		} catch (err) {
-			try {
-				await page.waitForSelector('#labeled-input-password', { timeout: 2500 })
-				await page.waitForSelector('button.btn.btn-orange')
-				await page.type('#labeled-input-password', config.password)
-				await page.click('button.btn.btn-orange')
-				await page.waitForTimeout(1500)
-				try {
-					await page.waitForSelector('#labeled-input-password', { timeout: 500 })
-				} catch (passwordSelectorErr) {
-					logger.trace("Logged in")
-					return true
-				}
-			} catch (passwordInputErr) {
-				logger.warn("Manual authorization code required by Newegg.  This should only happen once.")
-				while (page.url().includes('signin')) {
-					await page.waitForTimeout(500)
-				}
-				logger.trace("Logged in")
-				return true
-			}
+			await page.waitForSelector('#labeled-input-password', { timeout: 500 })
+		} catch (passwordSelectorErr) {
+			logger.trace('Logged in')
+			return true
 		}
-	} else if (page.url().includes("areyouahuman")) {
-		await page.waitForTimeout(1000)
+	} catch (passwordInputErr) {
+		if (config.skip_2FA) {
+			logger.warn("email 2FA is being asked, will reload in 45s to skip it")
+			await page.waitForTimeout(45000)
+			return false
+		}
+		
+		//Aparrently waiting 30s and reloading allows a bypass of 2FA
+		//Incase of this being a security bug, kept code for inputting 6 digit 2FA code via console
+		logger.error(passwordInputError)
+		logger.warn("Manual authorization code required by Newegg.  This should only happen once.")
+
+		var tempFACode = true
+
+		while (page.url().includes('signin')) {
+			if (tempFACode == true) {
+				tempFACode = false
+				
+				rl.question('What is the 6 digit 2FA code? ', async function(FACode) {
+					logger.info(`code is: ${FACode}`)
+					
+					await page.waitForSelector('input[aria-label="verify code 1"]')
+					await page.waitForSelector('input[aria-label="verify code 2"]')
+					await page.waitForSelector('input[aria-label="verify code 3"]')
+					await page.waitForSelector('input[aria-label="verify code 4"]')
+					await page.waitForSelector('input[aria-label="verify code 5"]')
+					await page.waitForSelector('input[aria-label="verify code 6"]')
+					await page.waitForSelector('#signInSubmit', { timeout: 2500 })
+					
+					await page.type('input[aria-label="verify code 1"]', FACode)
+					await page.waitForTimeout(500)
+					await page.click('#signInSubmit')
+					await page.waitForTimeout(2500)
+					
+					tempFACode = true
+				})
+			}
+			
+			await page.waitForTimeout(500)
+		}
+		
+		logger.trace('Logged in')
+		return true
 	}
 	
 	return false
@@ -71,7 +121,7 @@ async function check_wishlist(page) {
  * Check the cart and make sure the subtotal is within the max price
  * @param {*} page The page containing the element
  */
-async function check_cart(page) {
+async function check_cart(page, removed = false) {
 	const amountElementName = ".summary-content-total"
 	try {
 		await page.waitForSelector(amountElementName, { timeout: 2000 })
@@ -80,22 +130,31 @@ async function check_cart(page) {
 		var price = parseInt(text.split('$')[1])
 		logger.info(`Subtotal of cart is ${price}`)
 
-		if (price > config.price_limit) {
+		if (price === 0) {
+			if (removed)
+				logger.error("The last item removed exceeds the max price, cannot purchase item")
+			else
+				logger.error("There are no items in the cart, item possibly went out of stock when adding to cart")
+			
+			return false
+		} else if (price > config.price_limit) {
 			if (config.over_price_limit_behavior === "stop") {
-				logger.error("Price exceeds limit, ending Newegg Shopping Bot process")
+				logger.error("Subtotal exceeds limit, stopping Newegg Shopping Bot process")
+				
 				while (true) {
 					
 				}
 			} else if (config.over_price_limit_behavior === "remove") {
-				logger.error("Price exceeds limit, removing from cart")
+				logger.warn("Subtotal exceeds limit, removing an item from cart")
+				
+				await page.waitForSelector('button.btn.btn-mini.btn-tertiary', { timeout: 5000 })
 				var button = await page.$$('button.btn.btn-mini')
-				while (true) {
-					try {
-						await button[1].click()
-					} catch (err) {
-						break
-					}
-				}
+				await button[2].click()
+				
+				logger.info("Successfully removed an item, checking cart")
+				await page.waitForTimeout(500)
+
+				return await check_cart(page, true)
 			} else {
 				logger.error("Price exceeds limit")
 			}
@@ -147,7 +206,7 @@ async function inputCVV(page) {
  * @param {*} page The page containing the order form
  */
 async function submitOrder(page) {
-	await page.waitForSelector("#btnCreditCard", { timeout: 3000 })
+	await page.waitForSelector('#btnCreditCard:not([disabled])', { timeout: 3000 })
 	await page.waitForTimeout(500)
 	
 	if (config.auto_submit) {
@@ -158,16 +217,51 @@ async function submitOrder(page) {
 	}
 }
 
+//https://stackoverflow.com/a/61304202
+const waitTillHTMLRendered = async (page, timeout = 30000) => {
+	const checkDurationMsecs = 500
+	const maxChecks = timeout / checkDurationMsecs
+	let lastHTMLSize = 0
+	let currentHTMLSize = 0
+	let checkCounts = 1
+	let countStableSizeIterations = 0
+	const minStableSizeIterations = 3
+
+	while(checkCounts++ <= maxChecks){
+		let html = await page.content()
+		currentHTMLSize = html.length
+
+		if(lastHTMLSize != 0 && currentHTMLSize == lastHTMLSize) 
+			countStableSizeIterations++
+		else 
+			countStableSizeIterations = 0 //reset the counter
+
+		if(countStableSizeIterations >= minStableSizeIterations) {
+			logger.info("Page rendered fully..")
+			break
+		}
+
+		lastHTMLSize = currentHTMLSize
+		await page.waitFor(checkDurationMsecs)
+	}  
+}
+
 async function run() {
 	logger.info("Newegg Shopping Bot Started")
 	logger.info("Please don't scalp, just get whatever you need for yourself")
+	
 	const browser = await puppeteer.launch({
-		headless: false,
+		headless: config.headless,
 		defaultViewport: { width: 1920, height: 1080 },
 		executablePath: config.browser_executable_path
 	})
 	const [page] = await browser.pages()
 	await page.setCacheEnabled(false)
+	
+	const rl = readline.createInterface({
+		input: process.stdin,
+		output: process.stdout
+	})
 
 	// Main loop
 	while (true) {
@@ -176,18 +270,19 @@ async function run() {
 			
 			if (page.url().includes("signin")) {
 				//need to signin every so often
-				await signin(page)
+				await signin(page, rl)
 			} else if (page.url().includes("areyouahuman")) {
 				await page.waitForTimeout(1000)
-			} else if (await check_wishlist(page)) {
-				if (await check_cart(page)) {
-					break	
-				}
+			} else if (await check_wishlist(page) && await check_cart(page)) {
+				break
 			}
 		} catch (err) {
+			logger.error(err)
 			continue
 		}
 	}
+	
+	rl.close()
 
 	// Continuely attempts to press the Checkout/Continue checkout buttons, until getting to last checkout button
 	// This way no time is wasted in saying "Wait 10s" after pressing a button, no easy way to wait for networkidle after an ajax request
@@ -211,7 +306,11 @@ async function run() {
 			}
 		} catch (err) {
 			try {
-				if (await page.waitForXPath("//button[contains(., 'Review your order')]", { timeout: 500 })) {
+				if (config.multi_step_order) {
+					await page.waitForXPath("//button[contains(., 'Review your order')]", { timeout: 500 })
+					break
+				} else {
+					await page.waitForSelector('#btnCreditCard:not([disabled])', { timeout: 500 })
 					break
 				}
 			} catch (err) {
@@ -225,7 +324,7 @@ async function run() {
 		await inputCVV(page)
 		await submitOrder(page)
 	} catch (err) {
-		logger.error("Cannot find the Place Order button.")
+		logger.error("Cannot find the Place Order button")
 		logger.warn("Please make sure that your Newegg account defaults for: shipping address, billing address, and payment method have been set.")
 	}
 }

@@ -2,12 +2,15 @@
 	"email":"email@email.com",
 	"password":"supercoolpassword",
 	"cv2":"123",
+	"skip_2FA":true,
 	"wishlist":"00000000",
 	"auto_submit":true,
 	"price_limit":"2000",
 	"over_price_limit_behavior": "stop",
+	"multi_step_order":true,
 	"refresh_time": 10,
 	"randomized_wait_ceiling": 10,
 	"site_domain": "com",
+	"headless":false,
 	"browser_executable_path": "C:/Progra~2/Google/Chrome/Application/chrome.exe"
 }
