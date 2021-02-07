@@ -16,11 +16,15 @@ log4js.configure({
 const logger = log4js.getLogger("Newegg Shopping Bot")
 logger.level = "trace"
 
+var TFA_wait = config.TFA_base_wait
+
 /**
  * Sign into wegg
  * @param {*} page The page containing the element
  */
 async function signin(page, rl) {
+	//probably want to change code to looking at the specific html elements for determining which step/field page is asking for
+	
 	//look for email field and input email
 	try {
 		await page.waitForSelector('#labeled-input-signEmail', { timeout: 2500 })
@@ -45,19 +49,26 @@ async function signin(page, rl) {
 		try {
 			await page.waitForSelector('#labeled-input-password', { timeout: 500 })
 		} catch (passwordSelectorErr) {
-			logger.trace('Logged in')
+			logger.trace("Logged in")
+			TFA_wait = config.TFA_base_wait
 			return true
 		}
 	} catch (passwordInputErr) {
-		if (config.skip_2FA) {
-			logger.warn("email 2FA is being asked, will reload in 45s to skip it")
-			await page.waitForTimeout(45000)
+		//Waiting 30-60s and reloading allows a bypass of 2FA
+		if (config.skip_TFA && !config.do_first_TFA) {
+			logger.warn(`email 2FA is being asked, will reload in ${TFA_wait}s to skip it`)
+			await page.waitForTimeout(TFA_wait * 1000)
+			TFA_wait = Math.min(TFA_wait + config.TFA_wait_add, config.TFA_wait_cap)
+			
+			if (!page.url().includes('signin')) {
+				logger.info("2FA inputted while waiting")
+				logger.trace("Logged in")
+				TFA_wait = config.TFA_base_wait
+			}
+			
 			return false
 		}
-		
-		//Aparrently waiting 30s and reloading allows a bypass of 2FA
-		//Incase of this being a security bug, kept code for inputting 6 digit 2FA code via console
-		logger.error(passwordInputError)
+
 		logger.warn("Manual authorization code required by Newegg.  This should only happen once.")
 
 		var tempFACode = true
@@ -67,7 +78,7 @@ async function signin(page, rl) {
 				tempFACode = false
 				
 				rl.question('What is the 6 digit 2FA code? ', async function(FACode) {
-					logger.info(`code is: ${FACode}`)
+					logger.info(`Inputting code ${FACode} into 2FA field`)
 					
 					await page.waitForSelector('input[aria-label="verify code 1"]')
 					await page.waitForSelector('input[aria-label="verify code 2"]')
@@ -89,7 +100,9 @@ async function signin(page, rl) {
 			await page.waitForTimeout(500)
 		}
 		
-		logger.trace('Logged in')
+		logger.trace("Logged in")
+		config.do_first_TFA=false
+		TFA_wait = config.TFA_base_wait
 		return true
 	}
 	
@@ -217,35 +230,6 @@ async function submitOrder(page) {
 	}
 }
 
-//https://stackoverflow.com/a/61304202
-const waitTillHTMLRendered = async (page, timeout = 30000) => {
-	const checkDurationMsecs = 500
-	const maxChecks = timeout / checkDurationMsecs
-	let lastHTMLSize = 0
-	let currentHTMLSize = 0
-	let checkCounts = 1
-	let countStableSizeIterations = 0
-	const minStableSizeIterations = 3
-
-	while(checkCounts++ <= maxChecks){
-		let html = await page.content()
-		currentHTMLSize = html.length
-
-		if(lastHTMLSize != 0 && currentHTMLSize == lastHTMLSize) 
-			countStableSizeIterations++
-		else 
-			countStableSizeIterations = 0 //reset the counter
-
-		if(countStableSizeIterations >= minStableSizeIterations) {
-			logger.info("Page rendered fully..")
-			break
-		}
-
-		lastHTMLSize = currentHTMLSize
-		await page.waitFor(checkDurationMsecs)
-	}  
-}
-
 async function run() {
 	logger.info("Newegg Shopping Bot Started")
 	logger.info("Please don't scalp, just get whatever you need for yourself")
@@ -268,6 +252,7 @@ async function run() {
 		try {
 			await page.goto('https://secure.newegg.' + config.site_domain + '/wishlist/md/' + config.wishlist, { waitUntil: 'networkidle0' })
 			
+			//add option for "dentity/sessionexpire"
 			if (page.url().includes("signin")) {
 				//need to signin every so often
 				await signin(page, rl)
