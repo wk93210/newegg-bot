@@ -253,13 +253,17 @@ async function run() {
 			await page.goto('https://secure.newegg.' + config.site_domain + '/wishlist/md/' + config.wishlist, { waitUntil: 'networkidle0' })
 			
 			//add option for "dentity/sessionexpire"
-			if (page.url().includes("signin")) {
+			if (page.url().includes("/wishlist/md/")) {
+				if (await check_wishlist(page) && await check_cart(page)) break
+			} else if (page.url().includes("signin")) {
 				//need to signin every so often
 				await signin(page, rl)
 			} else if (page.url().includes("areyouahuman")) {
+				logger.error("Human captcha test, waiting 1s and reloading")
 				await page.waitForTimeout(1000)
-			} else if (await check_wishlist(page) && await check_cart(page)) {
-				break
+			} else {
+				logger.error(`redirected to "${page.url()}" for some reason`)
+				await page.waitForTimeout(1000)
 			}
 		} catch (err) {
 			logger.error(err)
