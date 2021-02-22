@@ -11,8 +11,8 @@ After installing via git or by downloading the code and extracting it, navigate 
 ## Configuration
 Once that is finished, create a copy of config_template.json and name it config.json. Inside you will find the very basic customization options.  
 - `cv2` refers to the three digit code on the back of your credit card.  
-- `skip_TFA` refers to whether email 2FA should be skipped by waiting a set amount of time.
-- `do_first_TFA` refers to whether the first email 2FA should be skipped or not. I'd recommend inputting the first 2FA as it makes it less likely for a failed wait attempt to happen. Also worth noting that if you log into a trusted browser beforehand (a browser that remembers your previous NE login, so you only need to input the password rather then the 2FA) and let it sit for a minute, the bot session will go for a longer time without asking for a 2FA and will only need to use the password. Which means less downtime of the bot.
+- `skip_TFA` refers to whether email 2FA should be skipped by waiting a set amount of time. Failsafe in case of 2FA coming up unexpectedly
+- `do_first_TFA` refers to whether the first email 2FA should be skipped or not. I'd recommend inputting the first 2FA as it will be stored in the cookies/localStorage of the browser and not need to be asked again.
 - `TFA_base_wait` refers to the base time to wait when skipping an email 2FA.
 - `TFA_wait_add` refers to the amount of time to add to the 2FA wait time after a failed wait attempt.
 - `TFA_wait_cap` refers to the max wait time for skipping a 2FA.

@@ -1,6 +1,6 @@
 {
   "name": "neweggbot",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shopping Bot for NewEgg",
   "main": "NeweggBot.js",
   "scripts": {
@@ -13,7 +13,8 @@
   },
   "author": "Ataraksia",
   "contributors": [
-    "Cololophier"
+    "Cololophier",
+    "northmatt"
   ],
   "license": "ISC",
   "bugs": {
@@ -22,6 +23,6 @@
   "homepage": "https://github.com/Ataraksia/NeweggBot#readme",
   "dependencies": {
     "log4js": "^6.3.0",
-    "puppeteer": "^5.5.0"
+    "puppeteer": "^7.1.0"
   }
 }

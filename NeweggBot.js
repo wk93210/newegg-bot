@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer')
 const readline = require("readline")
-const config = require('./config.json')
 const log4js = require("log4js")
+const config = require('./config.json')
 
 log4js.configure({
 	appenders: {
@@ -28,7 +28,7 @@ async function signin(page, rl) {
 	//look for email field and input email
 	try {
 		await page.waitForSelector('#labeled-input-signEmail', { timeout: 2500 })
-		await page.waitForSelector('button.btn.btn-orange')
+		await page.waitForSelector('button.btn.btn-orange', { timeout: 2500 })
 		await page.type('#labeled-input-signEmail', config.email)
 		await page.click('button.btn.btn-orange')
 	} catch (signEmailInputErr) {
@@ -103,6 +103,7 @@ async function signin(page, rl) {
 		logger.trace("Logged in")
 		config.do_first_TFA=false
 		TFA_wait = config.TFA_base_wait
+
 		return true
 	}
 	
@@ -114,19 +115,21 @@ async function signin(page, rl) {
  * @param {*} page The page containing the element
  */
 async function check_wishlist(page) {
+	const buttonElementName = 'button.btn.btn-primary.btn-large.list-subtotal-button'
 	try {
 		//find a non disabled subtotal button, if none is found then errors out
-		await page.waitForSelector('button.btn.btn-primary.btn-large.list-subtotal-button:not([disabled])', { timeout: 500 })
+		await page.waitForSelector(buttonElementName, { timeout: 2000 })
+		if (await page.evaluate(element => element.disabled, await page.$(buttonElementName)) == true) throw 'No items found'
 	} catch (err) {
-		logger.error("No items found")
+		logger.error(err)
 		var nextCheckInSeconds = config.refresh_time + Math.floor(Math.random() * Math.floor(config.randomized_wait_ceiling))
 		logger.info(`The next attempt will be performed in ${nextCheckInSeconds} seconds`)
 		await page.waitForTimeout(nextCheckInSeconds * 1000)
 		return false
 	}
-	
-	await page.click('button.btn.btn-primary.btn-large.list-subtotal-button')
-	logger.info("Item(s) added to cart, checking cart")
+
+	await page.click(buttonElementName)
+	logger.trace("Item(s) added to cart, checking cart")
 	return true
 }
 
@@ -135,11 +138,10 @@ async function check_wishlist(page) {
  * @param {*} page The page containing the element
  */
 async function check_cart(page, removed = false) {
-	const amountElementName = ".summary-content-total"
+	const amountElementName = '.summary-content-total'
 	try {
 		await page.waitForSelector(amountElementName, { timeout: 2000 })
-		var amountElement = await page.$(amountElementName)
-		var text = await page.evaluate(element => element.textContent, amountElement)
+		var text = await page.evaluate(element => element.textContent, await page.$(amountElementName))
 		var price = parseInt(text.split('$')[1])
 		logger.info(`Subtotal of cart is ${price}`)
 
@@ -164,7 +166,7 @@ async function check_cart(page, removed = false) {
 				var button = await page.$$('button.btn.btn-mini')
 				await button[2].click()
 				
-				logger.info("Successfully removed an item, checking cart")
+				logger.trace("Successfully removed an item, checking cart")
 				await page.waitForTimeout(500)
 
 				return await check_cart(page, true)
@@ -175,7 +177,7 @@ async function check_cart(page, removed = false) {
 			return false
 		}
 		
-		logger.info("Cart checked, attempting to purchase")
+		logger.trace("Cart checked, attempting to purchase")
 		return true
 	} catch (err) {
 		logger.error(err.message)
@@ -233,26 +235,28 @@ async function submitOrder(page) {
 async function run() {
 	logger.info("Newegg Shopping Bot Started")
 	logger.info("Please don't scalp, just get whatever you need for yourself")
-	
+
 	const browser = await puppeteer.launch({
 		headless: config.headless,
 		defaultViewport: { width: 1920, height: 1080 },
-		executablePath: config.browser_executable_path
+		executablePath: config.browser_executable_path,
+		userDataDir: "./myDataDir"
 	})
 	const [page] = await browser.pages()
-	await page.setCacheEnabled(false)
-	
+	await page.setCacheEnabled(true)
+
 	const rl = readline.createInterface({
 		input: process.stdin,
 		output: process.stdout
 	})
 
+	var prevTime = 0
+	var prevTask = 0
 	// Main loop
 	while (true) {
 		try {
 			await page.goto('https://secure.newegg.' + config.site_domain + '/wishlist/md/' + config.wishlist, { waitUntil: 'networkidle0' })
-			
-			//add option for "dentity/sessionexpire"
+
 			if (page.url().includes("/wishlist/md/")) {
 				if (await check_wishlist(page) && await check_cart(page)) break
 			} else if (page.url().includes("signin")) {
