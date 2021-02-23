@@ -23,6 +23,8 @@
   "homepage": "https://github.com/Ataraksia/NeweggBot#readme",
   "dependencies": {
     "log4js": "^6.3.0",
-    "puppeteer": "^7.1.0"
+    "puppeteer": "^7.1.0",
+    "puppeteer-extra": "^3.1.17",
+    "puppeteer-extra-plugin-stealth": "^2.7.5"
   }
 }

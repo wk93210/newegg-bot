@@ -1,4 +1,5 @@
-const puppeteer = require('puppeteer')
+const puppeteer = require('puppeteer-extra')
+const stealthPlugin = require('puppeteer-extra-plugin-stealth')
 const readline = require("readline")
 const log4js = require("log4js")
 const config = require('./config.json')
@@ -236,11 +237,25 @@ async function run() {
 	logger.info("Newegg Shopping Bot Started")
 	logger.info("Please don't scalp, just get whatever you need for yourself")
 
+	//#block-insecure-private-network-requests
+	//#enable-web-authentication-cable-v2-support
+	//#allow-sxg-certs-without-extension
+	//#same-site-by-default-cookies
+	//#cookies-without-same-site-must-be-secure
+	//#safe-browsing-enhanced-protection-message-in-interstitials
+	//#dns-httpssvc
+	//#trust-tokens
+	//#use-first-party-set
+	//#enable-network-logging-to-file
+	puppeteer.use(stealthPlugin())
 	const browser = await puppeteer.launch({
 		headless: config.headless,
 		defaultViewport: { width: 1920, height: 1080 },
 		executablePath: config.browser_executable_path,
-		userDataDir: "./myDataDir"
+		userDataDir: "./myDataDir",
+		args: [
+			'--unsafely-treat-insecure-origin-as-secure=http://example.com'
+		]
 	})
 	const [page] = await browser.pages()
 	await page.setCacheEnabled(true)
@@ -250,8 +265,6 @@ async function run() {
 		output: process.stdout
 	})
 
-	var prevTime = 0
-	var prevTask = 0
 	// Main loop
 	while (true) {
 		try {

@@ -24,7 +24,7 @@ Once that is finished, create a copy of config_template.json and name it config.
 - `refresh_time` refers to the duration to wait in seconds between add-to-cart attempts. This should be specified as a number, rather than a string.
 - `randomized_wait_ceiling` This value will set the ceiling on the random number of seconds to be added to the `refresh_time`. While not guaranteed, this should help to prevent - or at least delay - IP bans based on consistent traffic/timing. This should be specified as a number, rather than a string.
 - `site_domain` refers to which site domain you want the bot to use ('ca' or 'com', potentially others aswell).
-- `headless` refers to whether you want the bot to run a headless browser session. Meaning, whether the browser itself will be visible or not.
+- `headless` refers to whether you want the bot to run a headless browser session. Meaning, whether the browser itself will be visible or not. However, with very minor testing this will incur the email 2FA multiple times due to NE seeing it as an untrsuted browser (probably from bot detection).
 - `browser_executable_path` This will set the path to the browser to be used by the bot. Depending on the browser selected, you *may* need to install additional packages.
 
 ## Usage
