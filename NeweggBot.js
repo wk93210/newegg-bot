@@ -3,7 +3,6 @@ import stealthPlugin from 'puppeteer-extra-plugin-stealth'
 import { createInterface } from "readline"
 import log4js from "log4js";
 import config from './config.json' with { type: "json" }
-import { timeout } from 'puppeteer';
 
 log4js.configure({
 	appenders: {
@@ -18,6 +17,44 @@ log4js.configure({
 const logger = log4js.getLogger("Newegg Shopping Bot")
 logger.level = "trace"
 
+async function clearCart(page) {
+	try {
+		await page.goto("https://secure.newegg.com/shop/cart", { timeout: 5000 })
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+
+	while (true) {
+		try {
+			await page.waitForSelector("#app > div.page-content > section > div > div > form > div.row-inner > div.row-body > div.empty-cells", { timeout: 2000 })
+			break
+		} catch (err) {
+			let buttonSelector = '#cart-top > div.row-top-left.flex-wrap.width-100 > div > button:nth-child(2)'
+			try {
+				//find a non disabled subtotal button, if none is found then errors out
+				await page.waitForSelector(buttonSelector, { timeout: 2000 })
+			} catch (err) {
+				logger.error(err)
+				return false
+			}
+			await page.click(buttonSelector)
+
+			buttonSelector = '#app > div.page-content > div.modal.show.fade > div > div > div.modal-footer > button.btn.btn-primary'
+			try {
+				//find a non disabled subtotal button, if none is found then errors out
+				await page.waitForSelector(buttonSelector, { timeout: 2000 })
+			} catch (err) {
+				logger.error(err)
+				return false
+			}
+			await page.click(buttonSelector)
+		}
+	}
+
+	return true
+}
+
 async function addToCart(page) {
 	try {
 		await page.goto(config.url, { timeout: 5000 })
@@ -31,7 +68,7 @@ async function addToCart(page) {
 		//find a non disabled subtotal button, if none is found then errors out
 		await page.waitForSelector(buttonSelector, { timeout: 2000 })
 	} catch (err) {
-		logger.error(err)
+		logger.error('Add to cart button not available...')
 		return false
 	}
 	await page.click(buttonSelector)
@@ -267,7 +304,7 @@ async function checkout(page) {
 		return false
 	}
 	await new Promise(r => setTimeout(r, 500))
-	// await page.click('#btnCreditCard')
+	await page.click('#btnCreditCard')
 
 	return true
 }
@@ -276,7 +313,6 @@ async function run() {
 	puppeteer.use(stealthPlugin())
 	const browser = await puppeteer.launch({
 		args: [
-			'-incognito',
 			'--disable-web-security',
 			'--disable-features=IsolateOrigins',
 			'--disable-site-isolation-trials'
@@ -294,6 +330,12 @@ async function run() {
 		input: process.stdin,
 		output: process.stdout
 	})
+
+
+	let isClearCartSuccessful = false;
+	while (!isClearCartSuccessful) {
+		isClearCartSuccessful = await clearCart(page)
+	}
 
 	let isAddToCartSuccessful = false;
 	while (!isAddToCartSuccessful) {
