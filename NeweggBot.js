@@ -154,7 +154,7 @@ async function checkout(page) {
 	// Continue as guest
 	buttonSelector = '#app > div > div > div > div > div.modal-footer > button.button.bg-orange.button-m'
 	try {
-		await page.waitForSelector(buttonSelector, { timeout: 2000 })
+		await page.waitForSelector(buttonSelector, { timeout: 3000 })
 	} catch (err) {
 		logger.error(err)
 		return false
@@ -170,15 +170,16 @@ async function checkout(page) {
 		return false
 	}
 	// The button is not clickable immediately after it is visible, wait 0.5s
-	await new Promise(r => setTimeout(r, 500))
+	await new Promise(r => setTimeout(r, 1000))
 	await page.click(buttonSelector)
-
 
 	let paymentFrame
 	let paymentFrameSelector = '#app > div > div > div > div > div > iframe'
 	try {
 		const frameHandle = await page.waitForSelector(paymentFrameSelector, { timeout: 3000 })
-		paymentFrame = await frameHandle.contentFrame();
+		paymentFrame = await frameHandle.contentFrame()
+		// Wait for the frame to load
+		await new Promise(r => setTimeout(r, 1000))
 	} catch (err) {
 		logger.error(err)
 		return false
@@ -208,7 +209,7 @@ async function checkout(page) {
 	try {
 		await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
 		await paymentFrame.click(inputSelector)
-		await paymentFrame.type(inputSelector, config.name, { delay: 100 })
+		await paymentFrame.type(inputSelector, config.name)
 	} catch (err) {
 		logger.error(err)
 		return false
@@ -218,7 +219,7 @@ async function checkout(page) {
 	try {
 		await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
 		await paymentFrame.click(inputSelector)
-		await paymentFrame.type(inputSelector, config.ccn, { delay: 100 })
+		await paymentFrame.type(inputSelector, config.ccn)
 	} catch (err) {
 		logger.error(err)
 		return false
