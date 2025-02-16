@@ -10,253 +10,275 @@ log4js.configure({
 		app: { type: 'file', filename: 'application.log' }
 	},
 	categories: {
-		default: { appenders: [ 'out', 'app' ], level: 'trace' }
+		default: { appenders: ['out', 'app'], level: 'trace' }
 	}
 })
 
 const logger = log4js.getLogger("Newegg Shopping Bot")
 logger.level = "trace"
 
-var TFA_wait = config.TFA_base_wait
-
-/**
- * Sign into wegg
- * @param {*} page The page containing the element
- */
-async function signin(page, rl) {
-	//probably want to change code to looking at the specific html elements for determining which step/field page is asking for
-	
-	//look for email field and input email
+async function addToCart(page) {
 	try {
-		await page.waitForSelector('#labeled-input-signEmail', { timeout: 2500 })
-		await page.waitForSelector('button.btn.btn-orange', { timeout: 2500 })
-		await page.type('#labeled-input-signEmail', config.email)
-		await page.click('button.btn.btn-orange')
-	} catch (signEmailInputErr) {
-		logger.error("No email selector found")
-	}
-	
-	await page.waitForTimeout(1500)
-	
-	//look for password field and input password
-	try {
-		await page.waitForSelector('#labeled-input-password', { timeout: 2500 })
-		await page.waitForSelector('button.btn.btn-orange')
-		await page.type('#labeled-input-password', config.password)
-		await page.click('button.btn.btn-orange')
-		
-		await page.waitForTimeout(1500)
-		
-		try {
-			await page.waitForSelector('#labeled-input-password', { timeout: 500 })
-		} catch (passwordSelectorErr) {
-			logger.trace("Logged in")
-			TFA_wait = config.TFA_base_wait
-			return true
-		}
-	} catch (passwordInputErr) {
-		//Waiting 30-60s and reloading allows a bypass of 2FA
-		if (config.skip_TFA && !config.do_first_TFA) {
-			logger.warn(`email 2FA is being asked, will reload in ${TFA_wait}s to skip it`)
-			await page.waitForTimeout(TFA_wait * 1000)
-			TFA_wait = Math.min(TFA_wait + config.TFA_wait_add, config.TFA_wait_cap)
-			
-			if (!page.url().includes('signin')) {
-				logger.info("2FA inputted while waiting")
-				logger.trace("Logged in")
-				TFA_wait = config.TFA_base_wait
-			}
-			
-			return false
-		}
-
-		logger.warn("Manual authorization code required by Newegg.  This should only happen once.")
-
-		var tempFACode = true
-
-		while (page.url().includes('signin')) {
-			if (tempFACode == true) {
-				tempFACode = false
-				
-				rl.question('What is the 6 digit 2FA code? ', async function(FACode) {
-					logger.info(`Inputting code ${FACode} into 2FA field`)
-					
-					await page.waitForSelector('input[aria-label="verify code 1"]')
-					await page.waitForSelector('input[aria-label="verify code 2"]')
-					await page.waitForSelector('input[aria-label="verify code 3"]')
-					await page.waitForSelector('input[aria-label="verify code 4"]')
-					await page.waitForSelector('input[aria-label="verify code 5"]')
-					await page.waitForSelector('input[aria-label="verify code 6"]')
-					await page.waitForSelector('#signInSubmit', { timeout: 2500 })
-					
-					await page.type('input[aria-label="verify code 1"]', FACode)
-					await page.waitForTimeout(500)
-					await page.click('#signInSubmit')
-					await page.waitForTimeout(2500)
-					
-					tempFACode = true
-				})
-			}
-			
-			await page.waitForTimeout(500)
-		}
-		
-		logger.trace("Logged in")
-		config.do_first_TFA=false
-		TFA_wait = config.TFA_base_wait
-
-		return true
-	}
-	
-	return false
-}
-
-/**
- * Check the wishlist and see if the "Add to Cart" button is disabled or not, then press it
- * @param {*} page The page containing the element
- */
-async function check_wishlist(page) {
-	const buttonElementName = 'button.btn.btn-primary.btn-large.list-subtotal-button'
-	try {
-		//find a non disabled subtotal button, if none is found then errors out
-		await page.waitForSelector(buttonElementName, { timeout: 2000 })
-		if (await page.evaluate(element => element.disabled, await page.$(buttonElementName)) == true) throw 'No items found'
+		await page.goto(config.url, { timeout: 5000 })
 	} catch (err) {
 		logger.error(err)
-		var nextCheckInSeconds = config.refresh_time + Math.floor(Math.random() * Math.floor(config.randomized_wait_ceiling))
-		logger.info(`The next attempt will be performed in ${nextCheckInSeconds} seconds`)
-		await page.waitForTimeout(nextCheckInSeconds * 1000)
 		return false
 	}
 
-	await page.click(buttonElementName)
-	logger.trace("Item(s) added to cart, checking cart")
+	const buttonSelector = '#ProductBuy > div > div:nth-child(2) > button'
+	try {
+		//find a non disabled subtotal button, if none is found then errors out
+		await page.waitForSelector(buttonSelector, { timeout: 2000 })
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+	await page.click(buttonSelector)
+
+	const modalSelector = '#modal-intermediary > div'
+	try {
+		await page.waitForSelector(modalSelector, { timeout: 2000 })
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
 	return true
 }
 
-/**
- * Check the cart and make sure the subtotal is within the max price
- * @param {*} page The page containing the element
- */
-async function check_cart(page, removed = false) {
-	const amountElementName = '.summary-content-total'
+async function checkout(page) {
+	let buttonSelector = '#app > div.page-content > section > div > div > form > div.row-inner > div.row-side > div > div > div.summary-content.width-100 > div > button'
 	try {
-		await page.waitForSelector(amountElementName, { timeout: 2000 })
-		var text = await page.evaluate(element => element.textContent, await page.$(amountElementName))
-		var price = parseInt(text.split('$')[1])
-		logger.info(`Subtotal of cart is ${price}`)
-
-		if (price === 0) {
-			if (removed)
-				logger.error("The last item removed exceeds the max price, cannot purchase item")
-			else
-				logger.error("There are no items in the cart, item possibly went out of stock when adding to cart")
-			
-			return false
-		} else if (price > config.price_limit) {
-			if (config.over_price_limit_behavior === "stop") {
-				logger.error("Subtotal exceeds limit, stopping Newegg Shopping Bot process")
-				
-				while (true) {
-					
-				}
-			} else if (config.over_price_limit_behavior === "remove") {
-				logger.warn("Subtotal exceeds limit, removing an item from cart")
-				
-				await page.waitForSelector('button.btn.btn-mini.btn-tertiary', { timeout: 5000 })
-				var button = await page.$$('button.btn.btn-mini')
-				await button[2].click()
-				
-				logger.trace("Successfully removed an item, checking cart")
-				await page.waitForTimeout(500)
-
-				return await check_cart(page, true)
-			} else {
-				logger.error("Price exceeds limit")
-			}
-			
-			return false
-		}
-		
-		logger.trace("Cart checked, attempting to purchase")
-		return true
+		await page.goto('https://secure.newegg.com/shop/cart', { timeout: 5000 })
+		await page.waitForSelector(buttonSelector, { timeout: 2000 })
 	} catch (err) {
-		logger.error(err.message)
+		logger.error(err)
 		return false
 	}
-}
+	await page.click(buttonSelector)
 
-/**
- * Input the Credit Verification Value (CVV)
- * @param {*} page The page containing the element
- */
-async function inputCVV(page) {
-	while (true) {
-		logger.info("Waiting for CVV input element")
-		try {
-			await page.waitForSelector("[placeholder='CVV2']", { timeout: 3000 })
-			await page.focus("[placeholder='CVV2']", { timeout: 5000 })
-			await page.type("[placeholder='CVV2']", config.cv2)
-			logger.info("CVV data inputted")
-			break
-		} catch (err) {
-			logger.warn("Cannot find CVV input element")
-		}
-	}
-	
-	await page.waitForTimeout(250)
+	buttonSelector = '#signin-signin-wrap > div > div.signin-body > div > div > div > form:nth-child(3) > div.form-cells > div > button'
 	try {
-		const [button] = await page.$x("//button[contains(., 'Review your order')]")
-		if (button) {
-			logger.info("Review Order")
-			await button.click()
-		}
+		await page.waitForSelector(buttonSelector, { timeout: 3000 })
+		await new Promise(r => setTimeout(r, 500))
 	} catch (err) {
-		logger.error("Cannot find the Review Order button")
 		logger.error(err)
+		return false
 	}
-}
+	await page.click(buttonSelector)
 
-/**
- * Submit the order
- * @param {*} page The page containing the order form
- */
-async function submitOrder(page) {
-	await page.waitForSelector('#btnCreditCard:not([disabled])', { timeout: 3000 })
-	await page.waitForTimeout(500)
-	
-	if (config.auto_submit) {
-		await page.click('#btnCreditCard')
-		logger.info("Completed purchase")
-	} else {
-		logger.warn("Order not submitted because 'auto_submit' is not enabled")
+	let inputSelector = '#shippingItemCell > div > div.checkout-step-body > div > div > div > div > form > div.form-cells > div:nth-child(1) > input'
+	try {
+		await page.waitForSelector(inputSelector, { timeout: 3000 })
+		await page.evaluate((inputSelector, name) => {
+			document.querySelector(inputSelector).value = name;
+		}, inputSelector, config.name)
+	} catch (err) {
+		logger.error(err)
+		return false
 	}
+
+	inputSelector = '#shippingItemCell > div > div.checkout-step-body > div > div > div > div > form > div.form-cells > div:nth-child(9) > label.address-autocomplete-box.is-wide > input'
+	try {
+		await page.waitForSelector(inputSelector, { timeout: 2000 })
+		await page.evaluate((inputSelector, city) => {
+			document.querySelector(inputSelector).value = city;
+		}, inputSelector, config.city)
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+
+	inputSelector = '#shippingItemCell > div > div.checkout-step-body > div > div > div > div > form > div.form-cells > div:nth-child(10) > label.form-select.is-wide > select'
+	try {
+		await page.waitForSelector(inputSelector, { timeout: 2000 })
+		await page.select(inputSelector, config.state)
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+
+	inputSelector = '#shippingItemCell > div > div.checkout-step-body > div > div > div > div > form > div.form-cells > div:nth-child(11) > input'
+	try {
+		await page.waitForSelector(inputSelector, { timeout: 2000 })
+		await page.evaluate((inputSelector, street) => {
+			document.querySelector(inputSelector).value = street;
+		}, inputSelector, config.zip)
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+
+	inputSelector = '#shippingItemCell > div > div.checkout-step-body > div > div > div > div > form > div.form-cells > div:nth-child(12) > div > input'
+	try {
+		await page.waitForSelector(inputSelector, { timeout: 2000 })
+		await page.click(inputSelector)
+		await page.type(inputSelector, config.phone)
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+
+	inputSelector = '#shippingItemCell > div > div.checkout-step-body > div > div > div > div > form > div.form-cells > div:nth-child(15) > input'
+	try {
+		await page.waitForSelector(inputSelector, { timeout: 2000 })
+		await page.evaluate((inputSelector, email) => {
+			document.querySelector(inputSelector).value = email;
+		}, inputSelector, config.email)
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+
+	// Input street address in the end because it will cause dropdown menu which might shift page focus
+	inputSelector = '#shippingItemCell > div > div.checkout-step-body > div > div > div > div > form > div.form-cells > div:nth-child(5) > label.address-autocomplete-box.is-wide > input'
+	try {
+		await page.waitForSelector(inputSelector, { timeout: 2000 })
+		await page.evaluate((inputSelector, street) => {
+			document.querySelector(inputSelector).value = street;
+		}, inputSelector, config.street)
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+
+	// Use this address button
+	buttonSelector = '#shippingItemCell > div > div.checkout-step-action > button'
+	try {
+		await page.waitForSelector(buttonSelector, { timeout: 2000 })
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+	await page.click(buttonSelector)
+
+	// Continue as guest
+	buttonSelector = '#app > div > div > div > div > div.modal-footer > button.button.bg-orange.button-m'
+	try {
+		await page.waitForSelector(buttonSelector, { timeout: 2000 })
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+	await page.click(buttonSelector)
+
+	// Begin payment
+	buttonSelector = '#app > div > section > div > div > div > div.row-body > div > div.item-cell.checkout-payment > div > div.checkout-step-body > div > div > div > div.checkout-payment-card > div.checkout-add-button > button'
+	try {
+		await page.waitForSelector(buttonSelector, { timeout: 3000 })
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+	// The button is not clickable immediately after it is visible, wait 0.5s
+	await new Promise(r => setTimeout(r, 500))
+	await page.click(buttonSelector)
+
+
+	let paymentFrame
+	let paymentFrameSelector = '#app > div > div > div > div > div > iframe'
+	try {
+		const frameHandle = await page.waitForSelector(paymentFrameSelector, { timeout: 3000 })
+		paymentFrame = await frameHandle.contentFrame();
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+
+	inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(1) > input'
+	try {
+		await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
+		console.log("wtfffaaa")
+		await paymentFrame.focus(inputSelector)
+		console.log("wtfffbbb")
+		const rev = await paymentFrame.evaluate(() => {
+			console.log("wtfffccc")
+			return 'wtf'
+			// while (document.querySelector(inputSelector).value != name) {
+			// 	document.querySelector(inputSelector).value = name;
+			// 	console.log(document.querySelector(inputSelector).value)
+			// }
+		});
+		console.log(rev)
+		await paymentFrame.focus(inputSelector)
+		console.log("wtfffddd")
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+
+	// inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(2) > input'
+	// try {
+	// 	await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
+	// 	await paymentFrame.evaluate((inputSelector, ccn) => {
+	// 		document.querySelector(inputSelector).value = ccn;
+	// 	}, inputSelector, config.ccn);
+	// } catch (err) {
+	// 	logger.error(err)
+	// 	return false
+	// }
+
+	// inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(3) > label > select'
+	// try {
+	// 	await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
+	// 	await paymentFrame.evaluate((inputSelector, ccm) => {
+	// 		document.querySelector(inputSelector).value = ccm;
+	// 	}, inputSelector, config.ccm);
+	// 	// await paymentFrame.click(inputSelector, { timeout: 2000 })
+	// 	// await paymentFrame.select(inputSelector, config.ccm)
+	// } catch (err) {
+	// 	logger.error(err)
+	// 	return false
+	// }
+
+	// inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(4) > label > select'
+	// try {
+	// 	await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
+	// 	await paymentFrame.evaluate((inputSelector, ccy) => {
+	// 		document.querySelector(inputSelector).value = ccy;
+	// 	}, inputSelector, config.ccy);
+	// 	// await paymentFrame.click(inputSelector, { timeout: 2000 })
+	// 	// await paymentFrame.select(inputSelector, config.ccy)
+	// } catch (err) {
+	// 	logger.error(err)
+	// 	return false
+	// }
+
+	// inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(5) > input'
+	// try {
+	// 	await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
+	// 	await paymentFrame.evaluate((inputSelector, cvv) => {
+	// 		document.querySelector(inputSelector).value = cvv;
+	// 	}, inputSelector, config.cvv);
+	// } catch (err) {
+	// 	logger.error(err)
+	// 	return false
+	// }
+
+	// buttonSelector = '#app > div > div.modal-footer > button'
+	// try {
+	// 	await paymentFrame.waitForSelector(buttonSelector, { timeout: 2000 })
+	// } catch (err) {
+	// 	logger.error(err)
+	// 	return false
+	// }
+	// await paymentFrame.click(buttonSelector)
+
+	// await page.waitForSelector('#btnCreditCard:not([disabled])', { timeout: 3000 })
+	// await new Promise(r => setTimeout(r, 500))
+	// await page.click('#btnCreditCard')
+
+	return true
 }
 
 async function run() {
-	logger.info("Newegg Shopping Bot Started")
-	logger.info("Please don't scalp, just get whatever you need for yourself")
-
-	//#block-insecure-private-network-requests
-	//#enable-web-authentication-cable-v2-support
-	//#allow-sxg-certs-without-extension
-	//#same-site-by-default-cookies
-	//#cookies-without-same-site-must-be-secure
-	//#safe-browsing-enhanced-protection-message-in-interstitials
-	//#dns-httpssvc
-	//#trust-tokens
-	//#use-first-party-set
-	//#enable-network-logging-to-file
 	puppeteer.use(stealthPlugin())
 	const browser = await puppeteer.launch({
-		headless: config.headless,
 		defaultViewport: { width: 1920, height: 1080 },
-		executablePath: config.browser_executable_path,
 		userDataDir: "./myDataDir",
-		args: [
-			'--unsafely-treat-insecure-origin-as-secure=http://example.com'
-		]
+		executablePath: config.browser_executable_path,
+		headless: false,
 	})
+
 	const [page] = await browser.pages()
 	await page.setCacheEnabled(true)
 
@@ -265,74 +287,18 @@ async function run() {
 		output: process.stdout
 	})
 
-	// Main loop
-	while (true) {
-		try {
-			await page.goto('https://secure.newegg.' + config.site_domain + '/wishlist/md/' + config.wishlist, { waitUntil: 'networkidle0' })
-
-			if (page.url().includes("/wishlist/md/")) {
-				if (await check_wishlist(page) && await check_cart(page)) break
-			} else if (page.url().includes("signin")) {
-				//need to signin every so often
-				await signin(page, rl)
-			} else if (page.url().includes("areyouahuman")) {
-				logger.error("Human captcha test, waiting 1s and reloading")
-				await page.waitForTimeout(1000)
-			} else {
-				logger.error(`redirected to "${page.url()}" for some reason`)
-				await page.waitForTimeout(1000)
-			}
-		} catch (err) {
-			logger.error(err)
-			continue
-		}
+	let isAddToCartSuccessful = false;
+	while (!isAddToCartSuccessful) {
+		await new Promise(r => setTimeout(r, config.refresh_time * 1000 + 5 * Math.random() * 1000))
+		isAddToCartSuccessful = await addToCart(page)
 	}
-	
+
+	let isCheckoutSuccessful = false;
+	while (!isCheckoutSuccessful) {
+		isCheckoutSuccessful = await checkout(page)
+	}
+
 	rl.close()
-
-	// Continuely attempts to press the Checkout/Continue checkout buttons, until getting to last checkout button
-	// This way no time is wasted in saying "Wait 10s" after pressing a button, no easy way to wait for networkidle after an ajax request
-	while (true) {
-		try {
-			let button
-			
-			if (page.url().includes("Cart")) {
-				button = await page.waitForXPath("//button[contains(., 'Secure Checkout')]", { timeout: 1000 })
-			} else if (page.url().includes("checkout")) {
-				button = await page.waitForXPath("//button[contains(., 'Continue to')]", { timeout: 1000 })
-			} else {
-				await page.waitForTimeout(1000)
-				continue
-			}
-			
-			await page.waitForTimeout(500)
-			
-			if (button) {
-				await button.click()
-			}
-		} catch (err) {
-			try {
-				if (config.multi_step_order) {
-					await page.waitForXPath("//button[contains(., 'Review your order')]", { timeout: 500 })
-					break
-				} else {
-					await page.waitForSelector('#btnCreditCard:not([disabled])', { timeout: 500 })
-					break
-				}
-			} catch (err) {
-				continue
-			}
-		}
-	}
-
-	//CVV and order submit stuff
-	try {
-		await inputCVV(page)
-		await submitOrder(page)
-	} catch (err) {
-		logger.error("Cannot find the Place Order button")
-		logger.warn("Please make sure that your Newegg account defaults for: shipping address, billing address, and payment method have been set.")
-	}
 }
 
 run()
