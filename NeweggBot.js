@@ -3,6 +3,7 @@ import stealthPlugin from 'puppeteer-extra-plugin-stealth'
 import { createInterface } from "readline"
 import log4js from "log4js";
 import config from './config-lli.json' with { type: "json" }
+import { timeout } from 'puppeteer';
 
 log4js.configure({
 	appenders: {
@@ -148,37 +149,43 @@ async function checkout(page) {
 		logger.error(err)
 		return false
 	}
-	await page.click(buttonSelector)
-
-	// Continue as guest
-	buttonSelector = '#app > div > div > div > div > div.modal-footer > button.button.bg-orange.button-m'
-	try {
-		await page.waitForSelector(buttonSelector, { timeout: 3000 })
-	} catch (err) {
-		logger.error(err)
-		return false
+	let retries = 5;
+	let cnt = 0
+	while (true) {
+		try {
+			await page.click(buttonSelector)
+			await page.waitForSelector('#shippingItemCell > div > div.checkout-step-body > div > div > div > div.checkout-tab-content-title.item-title', { timeout: 2000 })
+			break
+		} catch (err) {
+			cnt += 1
+			if (cnt == retries) {
+				logger.error(err)
+				return false
+			}
+			await new Promise(r => setTimeout(r, 5 * Math.random() * 1000))
+		}
 	}
-	await page.click(buttonSelector)
 
-	// Use this address button
-	buttonSelector = '#app > div > div > div > div > div.modal-footer > button.button.bg-orange.button-m'
-	try {
-		await page.waitForSelector('#app > div > div > div > div > div.modal-body > div:nth-child(3) > div > div > label > address', { timeout: 3000 })
-	} catch (err) {
-		logger.error(err)
-		return false
-	}
-	await page.click(buttonSelector)
-
-	// Begin payment
+	// Suppress popup windows until payment button comes out
 	buttonSelector = '#app > div > section > div > div > div > div.row-body > div > div.item-cell.checkout-payment > div > div.checkout-step-body > div > div > div > div.checkout-payment-card > div.checkout-add-button > button'
-	try {
-		await page.waitForSelector(buttonSelector, { timeout: 3000 })
-	} catch (err) {
-		logger.error(err)
-		return false
+	let popUpbuttonSelector = '#app > div > div > div > div > div.modal-footer > button.button.bg-orange.button-m'
+	while (true) {
+		try {
+			await page.waitForSelector(buttonSelector, { timeout: 3000 })
+			break
+		} catch (err) {
+			try {
+				await page.waitForSelector(popUpbuttonSelector, { timeout: 3000 })
+			} catch (err) {
+				console.log(err)
+				return false
+			}
+			await new Promise(r => setTimeout(r, 5 * Math.random() * 1000))
+			await page.click(popUpbuttonSelector)
+		}
 	}
-	// The button is not clickable immediately after it is visible, wait 0.5s
+
+	// The payment button is not clickable immediately after it is visible, wait 1s
 	await new Promise(r => setTimeout(r, 1000))
 	await page.click(buttonSelector)
 
@@ -260,7 +267,7 @@ async function checkout(page) {
 		return false
 	}
 	await new Promise(r => setTimeout(r, 500))
-	await page.click('#btnCreditCard')
+	// await page.click('#btnCreditCard')
 
 	return true
 }
@@ -269,6 +276,7 @@ async function run() {
 	puppeteer.use(stealthPlugin())
 	const browser = await puppeteer.launch({
 		args: [
+			'-incognito',
 			'--disable-web-security',
 			'--disable-features=IsolateOrigins',
 			'--disable-site-isolation-trials'
