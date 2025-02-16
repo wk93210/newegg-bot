@@ -149,7 +149,7 @@ async function checkout(page) {
 		logger.error(err)
 		return false
 	}
-	let retries = 5;
+	let retries = 3;
 	let cnt = 0
 	while (true) {
 		try {
@@ -162,7 +162,7 @@ async function checkout(page) {
 				logger.error(err)
 				return false
 			}
-			await new Promise(r => setTimeout(r, 5 * Math.random() * 1000))
+			await new Promise(r => setTimeout(r, 2 * Math.random() * 1000))
 		}
 	}
 
@@ -180,8 +180,8 @@ async function checkout(page) {
 				console.log(err)
 				return false
 			}
-			await new Promise(r => setTimeout(r, 5 * Math.random() * 1000))
 			await page.click(popUpbuttonSelector)
+			await new Promise(r => setTimeout(r, 2 * Math.random() * 1000))
 		}
 	}
 
