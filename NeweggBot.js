@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer-extra'
 import stealthPlugin from 'puppeteer-extra-plugin-stealth'
 import { createInterface } from "readline"
 import log4js from "log4js";
-import config from './config-lli.json' with { type: "json" }
+import config from './config.json' with { type: "json" }
 
 log4js.configure({
 	appenders: {
@@ -84,7 +84,14 @@ async function addToCart(page) {
 }
 
 async function checkout(page) {
-	let buttonSelector = '#modal-intermediary > div > div > div.modal-body.auto-height > div.item-actions > button.btn.btn-undefined.btn-primary'
+	try {
+		await page.goto('https://secure.newegg.com/shop/cart', { timeout: 3000 })
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+
+	let buttonSelector = '#app > div.page-content > section > div > div > form > div.row-inner > div.row-side > div > div > div.summary-content.width-100 > div > button'
 	try {
 		await page.waitForSelector(buttonSelector, { timeout: 2000 })
 	} catch (err) {
@@ -95,24 +102,26 @@ async function checkout(page) {
 
 	let inputSelector = '#app > div > section > div > div > div > div.row-body > div > div.item-cell.checkout-payment > div > div.checkout-step-body > div:nth-child(1) > div > label > div > div.retype-security-code > input'
 	try {
-		await page.waitForSelector(inputSelector, { timeout: 2000 })
+		await page.waitForSelector(inputSelector, { timeout: 5000 })
 		await page.click(inputSelector)
-		await page.type(inputSelector, config.cvv, { delay: 100 })
+		await page.type(inputSelector, config.cvv, { delay: 200 })
 	} catch (err) {
 		logger.error(err)
 		return false
 	}
 
+	buttonSelector = '#btnCreditCard'
 	try {
-		await page.waitForSelector('#btnCreditCard:not([disabled])', { timeout: 3000 })
+		await page.waitForSelector(buttonSelector, { timeout: 3000 })
 	} catch (err) {
 		logger.error(err)
 		return false
 	}
 
+	await new Promise(r => setTimeout(r, 500))
+	console.log("Place order button ready...")
 	if (config.buy) {
-		await new Promise(r => setTimeout(r, 500))
-		await page.click('#btnCreditCard')
+		await page.click(buttonSelector)
 	}
 	return true
 }
@@ -123,7 +132,8 @@ async function run() {
 		args: [
 			'--disable-web-security',
 			'--disable-features=IsolateOrigins',
-			'--disable-site-isolation-trials'
+			'--disable-site-isolation-trials',
+			'-incognito',
 		],
 		executablePath: config.browser_executable_path,
 		headless: false,
@@ -138,8 +148,9 @@ async function run() {
 		output: process.stdout
 	})
 
-	await page.goto('https://www.newegg.com')
 	console.log('You have 30 seconds to login to your Newegg account in the browser window that just opened.')
+	console.log('Do not move after logging in. Program will start automatically.')
+	await page.goto('https://www.newegg.com')
 	await new Promise(r => setTimeout(r, 30000))
 
 	let isClearCartSuccessful = false;
