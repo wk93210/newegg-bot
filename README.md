@@ -8,7 +8,8 @@ You will require [Node.js](https://nodejs.org/en/) to run this.
 Then run `npm i` command.
 
 ## Configuration
-Once that is finished, create a copy of config_template.json and name it config.json. Inside you will find the very basic customization options.  
+Once that is finished, create a copy of config_template.json and name it config.json. Inside you will find the very basic customization options.
+- `buy` Whether you want this bot to place the order. Will place the order automatically if "true". Will not place the order and stay on the page for the last step if "false"
 - `url` The link to the item that you want to buy. "https://www.newegg.com/asrock-phantom-gaming-rx7900xt-pgw-20go-amd-radeon-rx-7900-xt-20gb-gddr6/p/N82E16814930117?Item=N82E16814930117&cm_sp=Homepage_SS-_-P1_14-930-117-_-02152025", for example
 - `name` Your full name, will be used for delivery address and credit card. "Mike Zuck", for example
 - `street` Street address for delivery, "1 Hacker Way", for example

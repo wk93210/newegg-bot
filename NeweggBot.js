@@ -303,9 +303,11 @@ async function checkout(page) {
 		logger.error(err)
 		return false
 	}
-	await new Promise(r => setTimeout(r, 500))
-	await page.click('#btnCreditCard')
 
+	if (config.buy) {
+		await new Promise(r => setTimeout(r, 500))
+		await page.click('#btnCreditCard')
+	}
 	return true
 }
 
