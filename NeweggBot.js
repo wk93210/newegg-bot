@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer-extra'
 import stealthPlugin from 'puppeteer-extra-plugin-stealth'
 import { createInterface } from "readline"
 import log4js from "log4js";
-import config from './config-lli.json' with { type: "json" }
+import config from './config.json' with { type: "json" }
 import { timeout } from 'puppeteer';
 
 log4js.configure({
