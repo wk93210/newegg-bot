@@ -140,7 +140,7 @@ async function run() {
 
 	await page.goto('https://www.newegg.com')
 	console.log('You have 30 seconds to login to your Newegg account in the browser window that just opened.')
-	// await new Promise(r => setTimeout(r, 30000))
+	await new Promise(r => setTimeout(r, 30000))
 
 	let isClearCartSuccessful = false;
 	while (!isClearCartSuccessful) {
