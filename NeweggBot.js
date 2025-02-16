@@ -208,11 +208,11 @@ async function checkout(page) {
 	let popUpbuttonSelector = '#app > div > div > div > div > div.modal-footer > button.button.bg-orange.button-m'
 	while (true) {
 		try {
-			await page.waitForSelector(buttonSelector, { timeout: 3000 })
+			await page.waitForSelector(buttonSelector, { timeout: 1000 })
 			break
 		} catch (err) {
 			try {
-				await page.waitForSelector(popUpbuttonSelector, { timeout: 3000 })
+				await page.waitForSelector(popUpbuttonSelector, { timeout: 500 })
 			} catch (err) {
 				console.log(err)
 				return false
@@ -222,8 +222,8 @@ async function checkout(page) {
 		}
 	}
 
-	// The payment button is not clickable immediately after it is visible, wait 1s
-	await new Promise(r => setTimeout(r, 1000))
+	// The payment button is not clickable immediately after it is visible, wait 0.5s
+	await new Promise(r => setTimeout(r, 500))
 	await page.click(buttonSelector)
 
 	let paymentFrame
