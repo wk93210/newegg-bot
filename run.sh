@@ -2,5 +2,5 @@
 
 while true
 do
-  node NeweggBot.js
+  npm start
 done

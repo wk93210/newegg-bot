@@ -3,7 +3,7 @@
   "version": "1.0.1",
   "description": "Shopping Bot for NewEgg",
   "main": "NeweggBot.js",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node neweggbot.js"
@@ -21,6 +21,7 @@
   "license": "ISC",
   "homepage": "https://github.com/wk93210/newegg-bot/blob/master/README.md",
   "dependencies": {
+    "clipboardy": "4.0.0",
     "log4js": "^6.9.1",
     "puppeteer": "^24.2.1",
     "puppeteer-extra": "^3.3.6",

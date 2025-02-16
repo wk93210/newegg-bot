@@ -1,8 +1,8 @@
-const puppeteer = require('puppeteer-extra')
-const stealthPlugin = require('puppeteer-extra-plugin-stealth')
-const readline = require("readline")
-const log4js = require("log4js")
-const config = require('./config.json')
+import puppeteer from 'puppeteer-extra'
+import stealthPlugin from 'puppeteer-extra-plugin-stealth'
+import { createInterface } from "readline"
+import log4js from "log4js";
+import config from './config.json' with { type: "json" }
 
 log4js.configure({
 	appenders: {
@@ -69,9 +69,9 @@ async function checkout(page) {
 	let inputSelector = '#shippingItemCell > div > div.checkout-step-body > div > div > div > div > form > div.form-cells > div:nth-child(1) > input'
 	try {
 		await page.waitForSelector(inputSelector, { timeout: 3000 })
-		await page.evaluate((inputSelector, name) => {
-			document.querySelector(inputSelector).value = name;
-		}, inputSelector, config.name)
+		await page.evaluate((inputSelector, name) =>
+			document.querySelector(inputSelector).value = name
+			, inputSelector, config.name)
 	} catch (err) {
 		logger.error(err)
 		return false
@@ -80,9 +80,9 @@ async function checkout(page) {
 	inputSelector = '#shippingItemCell > div > div.checkout-step-body > div > div > div > div > form > div.form-cells > div:nth-child(9) > label.address-autocomplete-box.is-wide > input'
 	try {
 		await page.waitForSelector(inputSelector, { timeout: 2000 })
-		await page.evaluate((inputSelector, city) => {
-			document.querySelector(inputSelector).value = city;
-		}, inputSelector, config.city)
+		await page.evaluate((inputSelector, city) =>
+			document.querySelector(inputSelector).value = city
+			, inputSelector, config.city)
 	} catch (err) {
 		logger.error(err)
 		return false
@@ -100,9 +100,9 @@ async function checkout(page) {
 	inputSelector = '#shippingItemCell > div > div.checkout-step-body > div > div > div > div > form > div.form-cells > div:nth-child(11) > input'
 	try {
 		await page.waitForSelector(inputSelector, { timeout: 2000 })
-		await page.evaluate((inputSelector, street) => {
-			document.querySelector(inputSelector).value = street;
-		}, inputSelector, config.zip)
+		await page.evaluate((inputSelector, street) =>
+			document.querySelector(inputSelector).value = street
+			, inputSelector, config.zip)
 	} catch (err) {
 		logger.error(err)
 		return false
@@ -121,9 +121,9 @@ async function checkout(page) {
 	inputSelector = '#shippingItemCell > div > div.checkout-step-body > div > div > div > div > form > div.form-cells > div:nth-child(15) > input'
 	try {
 		await page.waitForSelector(inputSelector, { timeout: 2000 })
-		await page.evaluate((inputSelector, email) => {
-			document.querySelector(inputSelector).value = email;
-		}, inputSelector, config.email)
+		await page.evaluate((inputSelector, email) =>
+			document.querySelector(inputSelector).value = email
+			, inputSelector, config.email)
 	} catch (err) {
 		logger.error(err)
 		return false
@@ -133,9 +133,9 @@ async function checkout(page) {
 	inputSelector = '#shippingItemCell > div > div.checkout-step-body > div > div > div > div > form > div.form-cells > div:nth-child(5) > label.address-autocomplete-box.is-wide > input'
 	try {
 		await page.waitForSelector(inputSelector, { timeout: 2000 })
-		await page.evaluate((inputSelector, street) => {
-			document.querySelector(inputSelector).value = street;
-		}, inputSelector, config.street)
+		await page.evaluate((inputSelector, street) =>
+			document.querySelector(inputSelector).value = street
+			, inputSelector, config.street)
 	} catch (err) {
 		logger.error(err)
 		return false
@@ -184,88 +184,73 @@ async function checkout(page) {
 		return false
 	}
 
-	inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(1) > input'
+	inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(3) > label > select'
 	try {
 		await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
-		console.log("wtfffaaa")
-		await paymentFrame.focus(inputSelector)
-		console.log("wtfffbbb")
-		const rev = await paymentFrame.evaluate(() => {
-			console.log("wtfffccc")
-			return 'wtf'
-			// while (document.querySelector(inputSelector).value != name) {
-			// 	document.querySelector(inputSelector).value = name;
-			// 	console.log(document.querySelector(inputSelector).value)
-			// }
-		});
-		console.log(rev)
-		await paymentFrame.focus(inputSelector)
-		console.log("wtfffddd")
+		await paymentFrame.click(inputSelector)
+		await paymentFrame.select(inputSelector, config.ccm)
 	} catch (err) {
 		logger.error(err)
 		return false
 	}
 
-	// inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(2) > input'
-	// try {
-	// 	await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
-	// 	await paymentFrame.evaluate((inputSelector, ccn) => {
-	// 		document.querySelector(inputSelector).value = ccn;
-	// 	}, inputSelector, config.ccn);
-	// } catch (err) {
-	// 	logger.error(err)
-	// 	return false
-	// }
+	inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(4) > label > select'
+	try {
+		await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
+		await paymentFrame.click(inputSelector)
+		await paymentFrame.select(inputSelector, config.ccy)
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
 
-	// inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(3) > label > select'
-	// try {
-	// 	await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
-	// 	await paymentFrame.evaluate((inputSelector, ccm) => {
-	// 		document.querySelector(inputSelector).value = ccm;
-	// 	}, inputSelector, config.ccm);
-	// 	// await paymentFrame.click(inputSelector, { timeout: 2000 })
-	// 	// await paymentFrame.select(inputSelector, config.ccm)
-	// } catch (err) {
-	// 	logger.error(err)
-	// 	return false
-	// }
+	inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(1) > input'
+	try {
+		await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
+		await paymentFrame.click(inputSelector)
+		await paymentFrame.type(inputSelector, config.name, { delay: 100 })
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
 
-	// inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(4) > label > select'
-	// try {
-	// 	await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
-	// 	await paymentFrame.evaluate((inputSelector, ccy) => {
-	// 		document.querySelector(inputSelector).value = ccy;
-	// 	}, inputSelector, config.ccy);
-	// 	// await paymentFrame.click(inputSelector, { timeout: 2000 })
-	// 	// await paymentFrame.select(inputSelector, config.ccy)
-	// } catch (err) {
-	// 	logger.error(err)
-	// 	return false
-	// }
+	inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(2) > input'
+	try {
+		await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
+		await paymentFrame.click(inputSelector)
+		await paymentFrame.type(inputSelector, config.ccn, { delay: 100 })
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
 
-	// inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(5) > input'
-	// try {
-	// 	await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
-	// 	await paymentFrame.evaluate((inputSelector, cvv) => {
-	// 		document.querySelector(inputSelector).value = cvv;
-	// 	}, inputSelector, config.cvv);
-	// } catch (err) {
-	// 	logger.error(err)
-	// 	return false
-	// }
+	inputSelector = '#app > div > div.modal-body.scrollbar > div:nth-child(1) > div:nth-child(5) > input'
+	try {
+		await paymentFrame.waitForSelector(inputSelector, { timeout: 2000 })
+		await paymentFrame.click(inputSelector)
+		await paymentFrame.type(inputSelector, config.cvv, { delay: 100 })
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
 
-	// buttonSelector = '#app > div > div.modal-footer > button'
-	// try {
-	// 	await paymentFrame.waitForSelector(buttonSelector, { timeout: 2000 })
-	// } catch (err) {
-	// 	logger.error(err)
-	// 	return false
-	// }
-	// await paymentFrame.click(buttonSelector)
+	buttonSelector = '#app > div > div.modal-footer > button'
+	try {
+		await paymentFrame.waitForSelector(buttonSelector, { timeout: 2000 })
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+	await paymentFrame.click(buttonSelector)
 
-	// await page.waitForSelector('#btnCreditCard:not([disabled])', { timeout: 3000 })
-	// await new Promise(r => setTimeout(r, 500))
-	// await page.click('#btnCreditCard')
+	try {
+		await page.waitForSelector('#btnCreditCard:not([disabled])', { timeout: 3000 })
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+	await new Promise(r => setTimeout(r, 500))
+	await page.click('#btnCreditCard')
 
 	return true
 }
@@ -273,16 +258,21 @@ async function checkout(page) {
 async function run() {
 	puppeteer.use(stealthPlugin())
 	const browser = await puppeteer.launch({
+		args: [
+			'--disable-web-security',
+			'--disable-features=IsolateOrigins',
+			'--disable-site-isolation-trials'
+		],
 		defaultViewport: { width: 1920, height: 1080 },
-		userDataDir: "./myDataDir",
 		executablePath: config.browser_executable_path,
 		headless: false,
+		userDataDir: "./myDataDir",
 	})
 
 	const [page] = await browser.pages()
 	await page.setCacheEnabled(true)
 
-	const rl = readline.createInterface({
+	const rl = createInterface({
 		input: process.stdin,
 		output: process.stdout
 	})
