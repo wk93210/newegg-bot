@@ -25,4 +25,4 @@ Once that is finished, create a copy of config_template.json and name it config.
 - `browser_executable_path` This will set the path to the browser to be used by the bot. "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", for example
 
 ## Usage
-After installation and configuration, the bot can then be run by using `./run.sh` 
+After installation and configuration, the bot can then be run by using `npm start` 
