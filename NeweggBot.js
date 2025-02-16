@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer-extra'
 import stealthPlugin from 'puppeteer-extra-plugin-stealth'
 import { createInterface } from "readline"
 import log4js from "log4js";
-import config from './config.json' with { type: "json" }
+import config from './config-lli.json' with { type: "json" }
 
 log4js.configure({
 	appenders: {
@@ -141,7 +141,6 @@ async function checkout(page) {
 		return false
 	}
 
-	// Use this address button
 	buttonSelector = '#shippingItemCell > div > div.checkout-step-action > button'
 	try {
 		await page.waitForSelector(buttonSelector, { timeout: 2000 })
@@ -155,6 +154,16 @@ async function checkout(page) {
 	buttonSelector = '#app > div > div > div > div > div.modal-footer > button.button.bg-orange.button-m'
 	try {
 		await page.waitForSelector(buttonSelector, { timeout: 3000 })
+	} catch (err) {
+		logger.error(err)
+		return false
+	}
+	await page.click(buttonSelector)
+
+	// Use this address button
+	buttonSelector = '#app > div > div > div > div > div.modal-footer > button.button.bg-orange.button-m'
+	try {
+		await page.waitForSelector('#app > div > div > div > div > div.modal-body > div:nth-child(3) > div > div > label > address', { timeout: 3000 })
 	} catch (err) {
 		logger.error(err)
 		return false
